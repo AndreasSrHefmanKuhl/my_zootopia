@@ -43,7 +43,7 @@ animals_data = load_data(ANIMALS_DATA_FILE)
 
 if animals_data and isinstance(animals_data, list):
 
-    # 2. Generate single string with the animals' data serialized as HTML
+    # 2. Generate a single string with the animals' data serialized as the final HTML card
     animals_output_string = ''
 
     # Iterate through the animals
@@ -51,52 +51,61 @@ if animals_data and isinstance(animals_data, list):
         if not isinstance(animal, dict):
             continue
 
-        # List to store the field printouts for this animal, including the <br/> and \n
-        output_parts = []
         characteristics = animal.get("characteristics", {})
 
         # Start the HTML serialization for the current animal card
-        output_parts.append('<li class="cards__item">\n')
+        animal_html = '<li class="cards__item">\n'
 
-        #  Name (Key: "name")
+        # 1. Name: Use <div class="card__title">
         if "name" in animal and isinstance(animal["name"], str):
-            # Append with <br/>\n as required
-            output_parts.append(f"Name: {animal['name']}<br/>\n")
+            # Trim for cleaner look, but ensure the data is safe
+            name = animal["name"].strip()
+            animal_html += f'  <div class="card__title">{name}</div>\n'
 
-        # Diet (Key: "characteristics" -> "diet")
+        # Start the characteristics block: <p class="card__text">
+        # Use a temporary list to build the <p> content only if data is present
+        p_content = []
+
+        # 2. Diet
         if "diet" in characteristics and isinstance(characteristics["diet"], str):
-            output_parts.append(f"Diet: {characteristics['diet']}<br/>\n")
+            p_content.append(f'      <strong>Diet:</strong> {characteristics["diet"]}<br/>\n')
 
-        #  First Location (Key: "locations")
+        # 3. First Location
         if ("locations" in animal and
                 isinstance(animal["locations"], list) and
                 animal["locations"] and
                 isinstance(animal["locations"][0], str)):
-            output_parts.append(f"Location: {animal['locations'][0]}<br/>\n")
+            p_content.append(f'      <strong>Location:</strong> {animal["locations"][0]}<br/>\n')
 
-        #  Type (Key: "characteristics" -> "type")
+        # 4. Type
         if "type" in characteristics and isinstance(characteristics["type"], str):
-            output_parts.append(f"Type: {characteristics['type']}<br/>\n")
+            p_content.append(f'      <strong>Type:</strong> {characteristics["type"]}<br/>\n')
+
+        # Only add the <p class="card__text"> block if there is content for it
+        if p_content:
+            animal_html += '  <p class="card__text">\n'
+            animal_html += "".join(p_content)
+            animal_html += '  </p>\n'
 
         # End the HTML serialization for the current animal card
-        # Note: The original example showed the closing </li> immediately following the last <br/>
-        output_parts.append('</li>\n')
+        animal_html += '</li>\n'
 
         # Append the completed HTML block for this animal to the total string
-        animals_output_string += "".join(output_parts)
+        animals_output_string += animal_html
 
-    #  Read the content of the template
+    # 1. Read the content of the template
     template_content = read_template(TEMPLATE_FILE)
 
-    #  Replace __REPLACE_ANIMALS_INFO__ with the generated string
+    # 3. Replace __REPLACE_ANIMALS_INFO__ with the generated string
     final_html_content = template_content.replace(PLACEHOLDER, animals_output_string)
 
-    #  Write the new HTML content to a new file, animals.html
+    # 4. Write the new HTML content to a new file, animals.html
     try:
         with open(OUTPUT_FILE, "w", encoding='utf-8') as f:
             f.write(final_html_content)
-        print(f"\nSUCCESS: Content serialized to HTML and written to {OUTPUT_FILE}")
-        #print("Commit your changes with a message akin to 'generate card item for every animal'.")
+        print(f"\nSUCCESS! Content fully serialized into HTML and written to {OUTPUT_FILE}")
+        print("You can now open 'animals.html' in your browser to view the final result.")
+
     except Exception as e:
         print(f"\nERROR: Could not write to {OUTPUT_FILE}. Details: {e}")
 
