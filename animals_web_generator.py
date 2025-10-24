@@ -2,7 +2,8 @@ import json
 import os
 
 
-# --- 1. Robust Data Loading Function ---
+# --- 1. File Handling Functions ---
+
 def load_data(file_path):
     """
     Loads a JSON file with robust error handling for file I/O and JSON decoding.
@@ -24,90 +25,103 @@ def load_data(file_path):
         return None
 
 
-# --- 2. Template Reading Function ---
 def read_template(file_path):
     """ Reads the content of an HTML template file. """
     with open(file_path, "r", encoding='utf-8') as handle:
         return handle.read()
 
 
-# --- 3. Main Logic ---
+# --- 2. Serialization Function ---
 
-ANIMALS_DATA_FILE = 'animals_data.json'
-TEMPLATE_FILE = 'animals_template.html'
-OUTPUT_FILE = 'animals.html'
-PLACEHOLDER = '__REPLACE_ANIMALS_INFO__'
+def serialize_animal(animal_obj):
+    """
+    Serializes a single animal dictionary into the required HTML card structure.
+    Returns the HTML string for one <li> element.
+    """
+    if not isinstance(animal_obj, dict):
+        return ''
 
-# Load the data
-animals_data = load_data(ANIMALS_DATA_FILE)
+    characteristics = animal_obj.get("characteristics", {})
+    animal_html = ''
 
-if animals_data and isinstance(animals_data, list):
+    # Start the HTML serialization: <li class="cards__item">
+    animal_html += '<li class="cards__item">\n'
 
-    # 2. Generate a single string with the animals' data serialized as the final HTML card
+    # 1. Name: Use <div class="card__title">
+    if "name" in animal_obj and isinstance(animal_obj["name"], str):
+        name = animal_obj["name"].strip()
+        animal_html += f'  <div class="card__title">{name}</div>\n'
+
+    # Use a list to build the <p class="card__text"> content only if data is present
+    p_content = []
+
+    # 2. Diet
+    if "diet" in characteristics and isinstance(characteristics["diet"], str):
+        p_content.append(f'      <strong>Diet:</strong> {characteristics["diet"]}<br/>\n')
+
+    # 3. First Location
+    if ("locations" in animal_obj and
+            isinstance(animal_obj["locations"], list) and
+            animal_obj["locations"] and
+            isinstance(animal_obj["locations"][0], str)):
+        p_content.append(f'      <strong>Location:</strong> {animal_obj["locations"][0]}<br/>\n')
+
+    # 4. Type
+    if "type" in characteristics and isinstance(characteristics["type"], str):
+        p_content.append(f'      <strong>Type:</strong> {characteristics["type"]}<br/>\n')
+
+    # Add the <p class="card__text"> block only if characteristics were found
+    if p_content:
+        animal_html += '  <p class="card__text">\n'
+        animal_html += "".join(p_content)
+        animal_html += '  </p>\n'
+
+    # End the HTML serialization for the current animal card
+    animal_html += '</li>\n'
+
+    return animal_html
+
+
+# --- 3. Main Script Execution ---
+
+def main():
+    """Main function to orchestrate loading, serialization, replacement, and writing."""
+    ANIMALS_DATA_FILE = 'animals_data.json'
+    TEMPLATE_FILE = 'animals_template.html'
+    OUTPUT_FILE = 'animals.html'
+    PLACEHOLDER = '__REPLACE_ANIMALS_INFO__'
+
+    # Load the data
+    animals_data = load_data(ANIMALS_DATA_FILE)
+
+    if not (animals_data and isinstance(animals_data, list)):
+        print("Script terminated: Data loading failed or top-level structure is not a list.")
+        return
+
+    # Generate a single string with the animals' data serialized as the final HTML card
     animals_output_string = ''
+    for animal_obj in animals_data:
+        animals_output_string += serialize_animal(animal_obj)
 
-    # Iterate through the animals
-    for animal in animals_data:
-        if not isinstance(animal, dict):
-            continue
+    # Read the content of the template
+    try:
+        template_content = read_template(TEMPLATE_FILE)
+    except Exception as e:
+        print(f"ERROR: Could not read template file. Details: {e}")
+        return
 
-        characteristics = animal.get("characteristics", {})
-
-        # Start the HTML serialization for the current animal card
-        animal_html = '<li class="cards__item">\n'
-
-        # 1. Name: Use <div class="card__title">
-        if "name" in animal and isinstance(animal["name"], str):
-            # Trim for cleaner look, but ensure the data is safe
-            name = animal["name"].strip()
-            animal_html += f'  <div class="card__title">{name}</div>\n'
-
-        # Start the characteristics block: <p class="card__text">
-        # Use a temporary list to build the <p> content only if data is present
-        p_content = []
-
-        # 2. Diet
-        if "diet" in characteristics and isinstance(characteristics["diet"], str):
-            p_content.append(f'      <strong>Diet:</strong> {characteristics["diet"]}<br/>\n')
-
-        # 3. First Location
-        if ("locations" in animal and
-                isinstance(animal["locations"], list) and
-                animal["locations"] and
-                isinstance(animal["locations"][0], str)):
-            p_content.append(f'      <strong>Location:</strong> {animal["locations"][0]}<br/>\n')
-
-        # 4. Type
-        if "type" in characteristics and isinstance(characteristics["type"], str):
-            p_content.append(f'      <strong>Type:</strong> {characteristics["type"]}<br/>\n')
-
-        # Only add the <p class="card__text"> block if there is content for it
-        if p_content:
-            animal_html += '  <p class="card__text">\n'
-            animal_html += "".join(p_content)
-            animal_html += '  </p>\n'
-
-        # End the HTML serialization for the current animal card
-        animal_html += '</li>\n'
-
-        # Append the completed HTML block for this animal to the total string
-        animals_output_string += animal_html
-
-    # 1. Read the content of the template
-    template_content = read_template(TEMPLATE_FILE)
-
-    # 3. Replace __REPLACE_ANIMALS_INFO__ with the generated string
+    # Replace the placeholder with the generated string
     final_html_content = template_content.replace(PLACEHOLDER, animals_output_string)
 
-    # 4. Write the new HTML content to a new file, animals.html
+    # Write the new HTML content to a new file, animals.html
     try:
         with open(OUTPUT_FILE, "w", encoding='utf-8') as f:
             f.write(final_html_content)
         print(f"\nSUCCESS! Content fully serialized into HTML and written to {OUTPUT_FILE}")
-        print("You can now open 'animals.html' in your browser to view the final result.")
-
+       # print("The code is now organized with a dedicated 'serialize_animal' function for better maintainability.")
     except Exception as e:
         print(f"\nERROR: Could not write to {OUTPUT_FILE}. Details: {e}")
 
-else:
-    print("Script terminated due to error in loading data.")
+
+if __name__ == "__main__":
+    main()
