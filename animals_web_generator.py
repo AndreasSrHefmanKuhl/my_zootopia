@@ -1,29 +1,10 @@
-import json
-import os
+import data_fetcher  #  Import the data fetcher module
 
+
+# The load_data function is removed as it's no longer needed for a static file.
+# kept read_template and serialize_animal.
 
 # --- 1. File Handling Functions ---
-
-def load_data(file_path):
-    """
-    Loads a JSON file with robust error handling for file I/O and JSON decoding.
-    Returns the data structure on success, or None on failure.
-    """
-    if not os.path.exists(file_path):
-        print(f"ERROR: File not found at path: {file_path}")
-        return None
-
-    try:
-        with open(file_path, "r", encoding='utf-8') as handle:
-            data = json.load(handle)
-            return data
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Failed to decode JSON from {file_path}. Details: {e}")
-        return None
-    except Exception as e:
-        print(f"ERROR: An unexpected error occurred while reading {file_path}. Details: {e}")
-        return None
-
 
 def read_template(file_path):
     """ Reads the content of an HTML template file. """
@@ -85,17 +66,20 @@ def serialize_animal(animal_obj):
 # --- 3. Main Script Execution ---
 
 def main():
-    """Main function to orchestrate loading, serialization, replacement, and writing."""
-    ANIMALS_DATA_FILE = 'animals_data.json'
+    """Main function to orchestrate data fetching, serialization, replacement, and writing."""
+
+    # Constants for file paths and placeholder
     TEMPLATE_FILE = 'animals_template.html'
     OUTPUT_FILE = 'animals.html'
     PLACEHOLDER = '__REPLACE_ANIMALS_INFO__'
 
-    # Load the data
-    animals_data = load_data(ANIMALS_DATA_FILE)
+    # --- NEW DATA FETCHING LOGIC ---
+    animal_name = input("Please enter an animal to search for (e.g., 'tiger'): ")
+    animals_data = data_fetcher.fetch_data(animal_name)
+    # ---------------------------------
 
     if not (animals_data and isinstance(animals_data, list)):
-        print("Script terminated: Data loading failed or top-level structure is not a list.")
+        print("Script terminated: Data fetching failed or data structure is invalid.")
         return
 
     # Generate a single string with the animals' data serialized as the final HTML card
@@ -117,8 +101,7 @@ def main():
     try:
         with open(OUTPUT_FILE, "w", encoding='utf-8') as f:
             f.write(final_html_content)
-        print(f"\nSUCCESS! Content fully serialized into HTML and written to {OUTPUT_FILE}")
-       # print("The code is now organized with a dedicated 'serialize_animal' function for better maintainability.")
+        print(f"\nSUCCESS! Content for '{animal_name}' fully serialized into HTML and written to {OUTPUT_FILE}")
     except Exception as e:
         print(f"\nERROR: Could not write to {OUTPUT_FILE}. Details: {e}")
 
